@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Treasure hunt loading screen</title>
+<style>
+  :root {
+    --map-bg: #FAEEDA;
+    --map-border: #854F0B;
+    --accent: #D85A30;
+    --needle: #D85A30;
+    --ship: #0F6E56;
+    --x-color: #993C1D;
+    --text-primary: #2C2C2A;
+    --text-secondary: #5F5E5A;
+    --bar-track: #F1EFE8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --map-bg: #412402;
+      --map-border: #FAC775;
+      --accent: #EF9F27;
+      --needle: #EF9F27;
+      --ship: #5DCAA5;
+      --x-color: #F09595;
+      --text-primary: #F1EFE8;
+      --text-secondary: #B4B2A9;
+      --bar-track: #2C2C2A;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0b0b0b;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .screen {
+    width: 100%;
+    max-width: 520px;
+    text-align: center;
+    padding: 2rem;
+  }
+  svg { width: 100%; height: auto; margin-bottom: 1.5rem; }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .bar-track {
+    flex: 1;
+    height: 10px;
+    background: var(--bar-track);
+    border-radius: 999px;
+    overflow: hidden;
+    border: 0.5px solid rgba(133,79,11,0.3);
+  }
+  .bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    border-radius: 999px;
+    transition: width 0.1s linear;
+  }
+  .pct {
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 32px;
+    text-align: right;
+    color: var(--text-primary);
+  }
+  .status {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+  .map-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="screen">
+
+  <svg viewBox="0 0 520 260" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="10" width="500" height="240" rx="12" style="fill: var(--map-bg);" stroke="none"/>
+    <path d="M40 60 Q 130 30 220 70 T 400 60" stroke="var(--map-border)" stroke-width="1.5" fill="none" stroke-dasharray="4 3" opacity="0.5"/>
+    <path d="M60 180 Q 150 220 260 190 T 460 200" stroke="var(--map-border)" stroke-width="1.5" fill="none" stroke-dasharray="4 3" opacity="0.5"/>
+    <path id="dotted-route" d="M50 210 C 120 100, 220 60, 300 130 S 430 90, 460 50" stroke="var(--map-border)" stroke-width="2" fill="none" stroke-dasharray="6 6"/>
+    <circle cx="50" cy="210" r="6" fill="var(--ship)"/>
+
+    <g id="ship" transform="translate(50,210)">
+      <path d="M-8 0 L 8 0 L 5 8 L -5 8 Z" fill="var(--ship)"/>
+      <line x1="0" y1="-10" x2="0" y2="0" stroke="var(--ship)" stroke-width="2"/>
+      <path d="M0 -10 L 8 -4 L 0 0 Z" fill="var(--ship)" opacity="0.6"/>
+    </g>
+
+    <g transform="translate(460,50)">
+      <line x1="-9" y1="-9" x2="9" y2="9" stroke="var(--x-color)" stroke-width="4" stroke-linecap="round"/>
+      <line x1="-9" y1="9" x2="9" y2="-9" stroke="var(--x-color)" stroke-width="4" stroke-linecap="round"/>
+    </g>
+
+    <g transform="translate(260,150)">
+      <circle r="20" fill="none" stroke="var(--map-border)" stroke-width="1.5"/>
+      <line x1="0" y1="-16" x2="0" y2="16" stroke="var(--map-border)" stroke-width="1"/>
+      <line x1="-16" y1="0" x2="16" y2="0" stroke="var(--map-border)" stroke-width="1"/>
+      <g id="needle" style="transform-origin: 260px 150px;">
+        <path d="M260 138 L 265 150 L 260 162 L 255 150 Z" fill="var(--needle)"/>
+      </g>
+    </g>
+  </svg>
+
+  <div class="bar-row">
+    <svg class="map-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon>
+      <line x1="9" y1="3" x2="9" y2="18"></line>
+      <line x1="15" y1="6" x2="15" y2="21"></line>
+    </svg>
+    <div class="bar-track">
+      <div class="bar-fill" id="bar"></div>
+    </div>
+    <span class="pct" id="pct">0%</span>
+  </div>
+
+  <p class="status" id="status">Setting sail</p>
+
+</div>
+
+<script>
+(function(){
+  var messages = ["Setting sail", "Charting the reefs", "Following the map", "Digging near the X", "Loot in sight"];
+  var pct = 0;
+  var bar = document.getElementById('bar');
+  var pctLabel = document.getElementById('pct');
+  var status = document.getElementById('status');
+  var ship = document.getElementById('ship');
+  var needle = document.getElementById('needle');
+  var path = document.getElementById('dotted-route');
+  var len = path.getTotalLength();
+  var angle = 0;
+
+  function tick(){
+    pct += Math.random() * 2.2;
+    if (pct > 100) pct = 100;
+    bar.style.width = pct + '%';
+    pctLabel.textContent = Math.round(pct) + '%';
+    var idx = Math.min(messages.length - 1, Math.floor((pct / 100) * messages.length));
+    status.textContent = messages[idx];
+    var point = path.getPointAtLength((pct / 100) * len);
+    ship.setAttribute('transform', 'translate(' + point.x + ',' + point.y + ')');
+    if (pct < 100) {
+      requestAnimationFrame(function(){ setTimeout(tick, 60); });
+    } else {
+      setTimeout(function(){
+        pct = 0;
+        requestAnimationFrame(function(){ setTimeout(tick, 60); });
+      }, 1500);
+    }
+  }
+  requestAnimationFrame(function(){ setTimeout(tick, 60); });
+
+  function spin(){
+    angle += 6;
+    needle.style.transform = 'rotate(' + Math.sin(angle * Math.PI / 180) * 20 + 'deg)';
+    requestAnimationFrame(spin);
+  }
+  spin();
+})();
+</script>
+
+</body>
+</html>
